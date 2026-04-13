@@ -184,11 +184,12 @@ def download(url: str, dest: Path) -> int:
     return total
 
 
-def format_date(start_time_ms: int | None) -> str:
+def format_start(start_time_ms: int | None) -> str:
+    """Format ms epoch as ``YYYY-MM-DDTHHMMSSZ`` (UTC) to match transcript filenames."""
     if not start_time_ms:
         return "unknown"
     try:
-        return datetime.fromtimestamp(start_time_ms / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
+        return datetime.fromtimestamp(start_time_ms / 1000, tz=timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
     except (ValueError, OSError):
         return "unknown"
 
@@ -246,7 +247,7 @@ def main() -> int:
 
         file_name = detail.get("file_name") or entry.get("file_name") or file_id
         start_ms = detail.get("start_time") or entry.get("start_time")
-        dest = audio_dir / f"{format_date(start_ms)}_{sanitize(str(file_name))}_{file_id}.mp3"
+        dest = audio_dir / f"plaud-{format_start(start_ms)}.mp3"
 
         if args.dry_run:
             print(f"[dry] {file_id} -> {dest.name}")
