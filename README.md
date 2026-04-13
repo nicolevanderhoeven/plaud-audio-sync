@@ -22,6 +22,9 @@ python3 sync.py --force      # re-download everything
 Audio lands in `./audio/` as `YYYY-MM-DD_<name>_<fileId>.mp3`. Already-seen file IDs are
 recorded in `state.json` so reruns are cheap.
 
+Set `PLAUD_AUDIO_DIR` in `.env` to override the output location (supports `~` and
+relative paths; relative resolves against the script dir).
+
 Uses Python stdlib only — no `pip install` needed.
 
 ## Schedule daily (macOS)

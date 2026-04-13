@@ -21,9 +21,25 @@ from pathlib import Path
 
 API_DOMAIN = "https://api.plaud.ai"
 SCRIPT_DIR = Path(__file__).resolve().parent
-AUDIO_DIR = SCRIPT_DIR / "audio"
+DEFAULT_AUDIO_DIR = SCRIPT_DIR / "audio"
 STATE_FILE = SCRIPT_DIR / "state.json"
 ENV_FILE = SCRIPT_DIR / ".env"
+
+
+def resolve_audio_dir() -> Path:
+    """Return the directory audio should land in.
+
+    Honors ``PLAUD_AUDIO_DIR`` env var (supports ``~`` and relative paths —
+    relative paths resolve against the script directory so cron jobs behave
+    predictably). Falls back to ``./audio`` next to the script.
+    """
+    raw = os.environ.get("PLAUD_AUDIO_DIR", "").strip()
+    if not raw:
+        return DEFAULT_AUDIO_DIR
+    path = Path(raw).expanduser()
+    if not path.is_absolute():
+        path = SCRIPT_DIR / path
+    return path
 
 MAX_ATTEMPTS = 5
 BASE_BACKOFF = 1.0  # seconds; doubles each retry with jitter
@@ -178,11 +194,15 @@ def main() -> int:
 
     load_env(ENV_FILE)
     token = os.environ.get("PLAUD_TOKEN", "").strip()
+    # Tolerate tokens pasted with a "bearer " prefix — the API expects just the JWT.
+    token = re.sub(r"^bearer\s+", "", token, flags=re.IGNORECASE)
     if not token:
         print("ERROR: PLAUD_TOKEN not set. Copy .env.example to .env and fill it in.", file=sys.stderr)
         return 2
 
-    AUDIO_DIR.mkdir(exist_ok=True)
+    audio_dir = resolve_audio_dir()
+    audio_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Audio directory: {audio_dir}")
     state = load_state()
     downloaded: dict = state.setdefault("downloaded", {})
 
@@ -218,7 +238,7 @@ def main() -> int:
 
         file_name = detail.get("file_name") or entry.get("file_name") or file_id
         start_ms = detail.get("start_time") or entry.get("start_time")
-        dest = AUDIO_DIR / f"{format_date(start_ms)}_{sanitize(str(file_name))}_{file_id}.mp3"
+        dest = audio_dir / f"{format_date(start_ms)}_{sanitize(str(file_name))}_{file_id}.mp3"
 
         if args.dry_run:
             print(f"[dry] {file_id} -> {dest.name}")
