@@ -1,0 +1,6 @@
+.env
+state.json
+audio/
+__pycache__/
+*.pyc
+.DS_Store
