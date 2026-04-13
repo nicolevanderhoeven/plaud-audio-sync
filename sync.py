@@ -104,7 +104,15 @@ def load_env(path: Path) -> None:
 
 
 def api_get_json(url: str, token: str, timeout: int = 60) -> dict:
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Authorization": f"Bearer {token}",
+            # Plaud's API is fronted by Cloudflare, which blocks the default
+            # urllib User-Agent with error 1010. A browser-like UA bypasses it.
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+        },
+    )
     label = url.rsplit("/", 2)[-2] + "/" + url.rsplit("/", 1)[-1].split("?")[0]
     with _open_with_retry(req, timeout, label) as resp:
         return json.loads(resp.read())
